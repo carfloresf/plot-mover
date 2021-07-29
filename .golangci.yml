@@ -1,0 +1,32 @@
+linters:
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - funlen
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - gosec
+    - lll
+    - misspell
+    - nakedret
+    - exportloopref
+    - unconvert
+    - whitespace
+    - wsl
+linters-settings:
+  lll:
+    line-length: 150
+  funlen:
+    lines: 90
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen
+        - malignedd

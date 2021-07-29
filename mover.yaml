@@ -1,0 +1,33 @@
+user: --user--
+password: --password--
+
+sources:
+ - "192.168.2.12:22" : "/media/hd2/"
+ - "192.168.2.124:22" : "/media/ssd1/"
+destinations:
+ - "/media/hd1/" :  true
+ - "/media/hd5/" :  true
+ - "/media/hd6/" :  true
+ - "/media/hd8/" :  true
+ - "/media/hda1/" : true
+ - "/media/hda2/" : true
+ - "/media/hda3/" : true
+ - "/media/hda4/" : true
+ - "/media/hd9/" : true
+ - "/media/hd10/" : true
+ - "/media/hd11/" : true
+ - "/media/hd12/" : true
+ - "/media/hd13/" : true
+ - "/media/hd14/" : true
+ - "/media/hd15/" : true
+ - "/media/hd16/" : true
+ - "/media/hd17/" : true
+ - "/media/hdf1/" : true
+ - "/media/hdf2/" : true
+ - "/media/hd18/" : true
+ - "/media/hd19/" : true
+ - "/media/hd20/" : true
+ - "/media/hd22/" : true
+ - "/media/hd23/" : true
+ - "/media/hd24/" : true
+ - "/media/ssd1/" : true

@@ -11,14 +11,12 @@ import (
 	"github.com/pkg/sftp"
 	"github.com/ricochet2200/go-disk-usage/du"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
 )
 
 var KB = uint64(1024)
 var minUsage = uint64(105)
-
-const user = "carlos"
-const pass = "xxxx"
 
 type client struct {
 	id        string
@@ -27,56 +25,34 @@ type client struct {
 	client    *sftp.Client
 }
 
-func main() {
+func initLog() {
 	customFormatter := new(log.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	log.SetFormatter(customFormatter)
 	customFormatter.FullTimestamp = true
+}
 
-	destinations := map[string]bool{
-		"/media/hd1/":  true,
-		"/media/hd5/":  true,
-		"/media/hd6/":  true,
-		"/media/hd8/":  true,
-		"/media/hda1/": true,
-		"/media/hda2/": true,
-		"/media/hda3/": true,
-		"/media/hda4/": true,
-		"/media/hd9/":  true,
-		"/media/hd10/": true,
-		"/media/hd11/": true,
-		"/media/hd12/": true,
-		"/media/hd13/": true,
-		"/media/hd14/": true,
-		"/media/hd15/": true,
-		"/media/hd16/": true,
-		"/media/hd17/": true,
-		"/media/hdf1/": true,
-		"/media/hdf2/": true,
-		"/media/hd18/": true,
-		"/media/hd19/": true,
-		"/media/hd20/": true,
-		"/media/hd22/": true,
-		"/media/hd23/": true,
-		"/media/hd24/": true,
+func main() {
+	initLog()
+
+	config, err := getConfig(".")
+	if err != nil {
+		log.Fatal("error getting config: ", err)
 	}
 
-	go getUsage(destinations)
-
-	ipAddrs := []string{"192.168.2.12:22", "192.168.2.124:22"}
-	sourceDirs := []string{"/media/hd2/", "/media/ssd1/"}
+	go getUsage(config.Destinations)
 
 	clients := []client{}
 
 	dirs := make(map[string]string)
 
-	for i, ip := range ipAddrs {
-		conn, sftp := createClient(ip)
+	for ip, dir := range config.Sources {
+		conn, sftp := createClient(ip, config.User, config.Password)
 		cl := client{
 			id:        ip,
 			conn:      conn,
 			client:    sftp,
-			sourceDir: sourceDirs[i],
+			sourceDir: dir,
 		}
 
 		clients = append(clients, cl)
@@ -86,16 +62,17 @@ func main() {
 
 	for _, c := range clients {
 		c := c
+
 		wg.Add(1)
-		time.Sleep(5 * time.Second)
 
 		go func(client *client) {
 			defer wg.Done()
 			log.Printf("starting routine for %s", c.id)
+
 			for {
 				now := time.Now()
 
-				destinationDir := getDestination(destinations, dirs)
+				destinationDir := getDestination(config.Destinations, dirs)
 				if destinationDir == "" {
 					log.Printf("no drive selected for %s on %s", c.id, c.sourceDir)
 					return
@@ -106,13 +83,17 @@ func main() {
 				plotFile, err := listFiles(c.client, c.sourceDir)
 				if err != nil {
 					dirs[c.id] = ""
+
 					log.Fatal(err)
 				}
 
 				if plotFile == "" {
 					log.Printf("no candidate file for %s on %s", c.id, c.sourceDir)
+
 					dirs[c.id] = ""
+
 					time.Sleep(5 * time.Minute)
+
 					continue
 				}
 
@@ -131,6 +112,7 @@ func main() {
 				}
 
 				dirs[c.id] = ""
+
 				timeTrack(now, fmt.Sprintf("copied in %s", c.id))
 			}
 		}(&c)
@@ -139,7 +121,7 @@ func main() {
 	wg.Wait()
 }
 
-func createClient(ipAddress string) (*ssh.Client, *sftp.Client) {
+func createClient(ipAddress string, user string, pass string) (*ssh.Client, *sftp.Client) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -217,11 +199,12 @@ func listFiles(sc *sftp.Client, remoteDir string) (plotFile string, err error) {
 
 func getUsage(dests map[string]bool) {
 	for {
-		for k, _ := range dests {
+		for k := range dests {
 			usage := du.NewDiskUsage(k).Usage()
 
 			log.Printf("usage for %s: %f", k, usage*100)
 		}
+
 		time.Sleep(60 * time.Minute)
 	}
 }
@@ -238,10 +221,34 @@ func getDestination(dests map[string]bool, dirs map[string]string) string {
 			}
 		}
 
-		if available >= minUsage && !inUse && v == true {
+		if available >= minUsage && !inUse && v {
 			return k
 		}
 	}
 
 	return ""
+}
+
+type MoverConfig struct {
+	User         string            `mapstructure:"user"`
+	Password     string            `mapstructure:"password"`
+	Sources      map[string]string `mapstructure:"sources"`
+	Destinations map[string]bool   `mapstructure:"destinations"`
+}
+
+func getConfig(configPath string) (MoverConfig, error) {
+	var conf MoverConfig
+
+	viper.SetConfigName("mover")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(configPath)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		return conf, err
+	}
+
+	err = viper.Unmarshal(&conf)
+
+	return conf, err
 }
