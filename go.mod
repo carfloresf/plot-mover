@@ -7,5 +7,5 @@ require (
 	github.com/ricochet2200/go-disk-usage/du v0.0.0-20210707232629-ac9918953285
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.10.1
-	golang.org/x/crypto v0.0.0-20220307211146-efcb8507fb70
+	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000
 )
